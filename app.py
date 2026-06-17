@@ -21,7 +21,7 @@ model = keras.models.load_model(os.path.join(os.path.dirname(__file__), 'model.h
 import json
 import random
 
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import pipeline, AutoTokenizer, TFAutoModelForSeq2SeqLM
 import spacy
 from spacy.language import Language
 from spacy_langdetect import LanguageDetector
@@ -31,7 +31,7 @@ os.environ['TRANSFORMERS_CACHE'] = os.path.join(os.path.dirname(__file__), 'hf_c
 os.makedirs(os.environ['TRANSFORMERS_CACHE'], exist_ok=True)
 
 # English to Swahili translator
-eng_swa_tokenizer = AutoTokenizer.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
+eng_swa_model = TFAutoModelForSeq2SeqLM.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
 eng_swa_model = AutoModelForSeq2SeqLM.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
 
 eng_swa_translator = pipeline(
@@ -46,7 +46,7 @@ def translate_text_eng_swa(text):
 
 # Swahili to English translator
 swa_eng_tokenizer = AutoTokenizer.from_pretrained("Rogendo/sw-en", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-swa_eng_model = AutoModelForSeq2SeqLM.from_pretrained("Rogendo/sw-en", cache_dir=os.environ['TRANSFORMERS_CACHE'])
+swa_eng_model = TFAutoModelForSeq2SeqLM.from_pretrained("Rogendo/sw-en", cache_dir=os.environ['TRANSFORMERS_CACHE'])
 
 swa_eng_translator = pipeline(
     "text2text-generation",
