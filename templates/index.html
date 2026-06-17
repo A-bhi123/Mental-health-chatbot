@@ -2,68 +2,203 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title> Psychiatrist Bot</title>
-  <link rel="shortcut icon" href="static/img/mhcicon.png" type="image/x-icon">
-  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <title>MindEase — Mental Health Support</title>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='img/mhcicon.png') }}" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+      --accent: #7c6df0; --accent2: #a78bfa; --green: #4ade80;
+      --text: #e8e9f0; --text2: #9899b0; --border: #2e3250;
+      --bot-bubble: #1e2235; --user-bubble: #2d2060; --radius: 18px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .logo-text { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; background: linear-gradient(90deg, var(--accent2), #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .status-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); background: rgba(74,222,128,0.1); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(74,222,128,0.2); }
+    .status-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .main { display: flex; flex: 1; height: calc(100vh - 65px); }
+    .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+    .sidebar-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; padding: 8px 4px; }
+    .quick-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 13px; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.4; }
+    .quick-btn:hover { background: var(--border); border-color: var(--accent); color: var(--accent2); }
+    .quick-btn .emoji { display: block; font-size: 18px; margin-bottom: 4px; }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .disclaimer { margin-top: auto; font-size: 11px; color: var(--text2); line-height: 1.6; padding: 12px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); }
+    .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .messages { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .msg { display: flex; gap: 10px; max-width: 75%; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .msg.bot { align-self: flex-start; }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .bot .avatar { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .user .avatar { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+    .bubble { padding: 12px 16px; border-radius: var(--radius); font-size: 14px; line-height: 1.6; }
+    .bot .bubble { background: var(--bot-bubble); border: 1px solid var(--border); border-top-left-radius: 4px; }
+    .user .bubble { background: var(--user-bubble); border: 1px solid rgba(124,109,240,0.3); border-top-right-radius: 4px; }
+    .msg-time { font-size: 10px; color: var(--text2); margin-top: 4px; padding: 0 4px; }
+    .msg-wrap { display: flex; flex-direction: column; }
+    .typing { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+    .typing span { width: 7px; height: 7px; background: var(--accent2); border-radius: 50%; animation: bounce 1.2s infinite; }
+    .typing span:nth-child(2){animation-delay:0.2s} .typing span:nth-child(3){animation-delay:0.4s}
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+    .source-badge { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
+    .source-ai { background: rgba(124,109,240,0.15); color: var(--accent2); border: 1px solid rgba(124,109,240,0.3); }
+    .source-local { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+    .welcome-card { background: linear-gradient(135deg, rgba(124,109,240,0.12), rgba(167,139,250,0.08)); border: 1px solid rgba(124,109,240,0.25); border-radius: 16px; padding: 20px; margin-bottom: 8px; }
+    .welcome-card h2 { font-family: 'Playfair Display', serif; font-size: 18px; margin-bottom: 6px; color: var(--accent2); }
+    .welcome-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .input-area { padding: 16px 28px 20px; background: var(--surface); border-top: 1px solid var(--border); }
+    .input-wrap { display: flex; gap: 10px; align-items: flex-end; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 10px 14px; transition: border-color 0.2s; }
+    .input-wrap:focus-within { border-color: var(--accent); }
+    #userInput { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif; resize: none; max-height: 120px; line-height: 1.5; }
+    #userInput::placeholder { color: var(--text2); }
+    #sendBtn { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.2s, transform 0.1s; }
+    #sendBtn:hover{opacity:0.9} #sendBtn:active{transform:scale(0.95)} #sendBtn:disabled{opacity:0.4;cursor:not-allowed}
+    #sendBtn svg { width: 16px; height: 16px; fill: white; }
+    .input-hint { font-size: 11px; color: var(--text2); text-align: center; margin-top: 8px; }
+    @media(max-width:700px){.sidebar{display:none}.messages{padding:16px}.input-area{padding:12px 16px 16px}}
+  </style>
 </head>
 <body>
 
-<div class="title">
-  <svg viewBox="0 0 640 512" title="robot">
-        <path fill="currentColor" d="M32,224H64V416H32A31.96166,31.96166,0,0,1,0,384V256A31.96166,31.96166,0,0,1,32,224Zm512-48V448a64.06328,64.06328,0,0,1-64,64H160a64.06328,64.06328,0,0,1-64-64V176a79.974,79.974,0,0,1,80-80H288V32a32,32,0,0,1,64,0V96H464A79.974,79.974,0,0,1,544,176ZM264,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,264,256Zm-8,128H192v32h64Zm96,0H288v32h64ZM456,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,456,256Zm-8,128H384v32h64ZM640,256V384a31.96166,31.96166,0,0,1-32,32H576V224h32A31.96166,31.96166,0,0,1,640,256Z" />
-      </svg>
-  <h3>Chatbot</h3>
- <div>
-<div id="chatbot" class="main-card collapsed">
-  <button id="chatbot_toggle">
-    <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 24 24" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M15 4v7H5.17l-.59.59-.58.58V4h11m1-2H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm5 4h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1z"/></svg>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
-</svg>
-  </button>
-  <div class="main-title">
-    <div>
-      <svg viewBox="0 0 640 512" title="robot">
-        <path fill="currentColor" d="M32,224H64V416H32A31.96166,31.96166,0,0,1,0,384V256A31.96166,31.96166,0,0,1,32,224Zm512-48V448a64.06328,64.06328,0,0,1-64,64H160a64.06328,64.06328,0,0,1-64-64V176a79.974,79.974,0,0,1,80-80H288V32a32,32,0,0,1,64,0V96H464A79.974,79.974,0,0,1,544,176ZM264,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,264,256Zm-8,128H192v32h64Zm96,0H288v32h64ZM456,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,456,256Zm-8,128H384v32h64ZM640,256V384a31.96166,31.96166,0,0,1-32,32H576V224h32A31.96166,31.96166,0,0,1,640,256Z" />
-      </svg>
-    </div>
-    <span>
-      <i class="fas fa-bug"></i> Psychiatrist Bot <i class="fas fa-bug"></i>
-
-    </span>
-
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧠</div>
+    <span class="logo-text">MindEase</span>
   </div>
-  <!-- partial:index.partial.html -->
+  <div class="status-badge">
+    <div class="status-dot"></div>
+    Online
+  </div>
+</header>
 
-  <main class="msger-chat">
-    <div class="msg left-msg">
-      <div class="msg-img" style="background-image: url(https://image.flaticon.com/icons/svg/327/327779.svg)"></div>
+<div class="main">
+  <aside class="sidebar">
+    <div class="sidebar-title">Quick Topics</div>
+    <button class="quick-btn" onclick="sendQuick('I am feeling anxious and stressed')"><span class="emoji">😰</span>Anxiety & Stress</button>
+    <button class="quick-btn" onclick="sendQuick('I have been feeling sad and depressed lately')"><span class="emoji">😔</span>Feeling Depressed</button>
+    <button class="quick-btn" onclick="sendQuick('I am having trouble sleeping at night')"><span class="emoji">😴</span>Sleep Problems</button>
+    <button class="quick-btn" onclick="sendQuick('How can I manage my anger better')"><span class="emoji">😤</span>Anger Management</button>
+    <button class="quick-btn" onclick="sendQuick('I need help with self care and motivation')"><span class="emoji">💪</span>Self Care Tips</button>
+    <div class="sidebar-divider"></div>
+    <button class="quick-btn" onclick="sendQuick('What are some breathing exercises for anxiety')"><span class="emoji">🌬️</span>Breathing Exercises</button>
+    <button class="quick-btn" onclick="sendQuick('I need someone to talk to about my problems')"><span class="emoji">💬</span>Just Need to Talk</button>
+    <div class="disclaimer">⚠️ This chatbot provides general support only. For emergencies, please contact a mental health professional or call a crisis helpline.</div>
+  </aside>
 
-        <div class="msg-bubble">
-          <div class="msg-info">
-            <div class="msg-info-name"> Psychiatrist Bot</div>
-          
-            <div class="msg-info-time"><time id="clock"></time></div>
-
-
-
-
-          </div>
-          <div class="msg-text">
-            Welcome to Psychiatrist, a safe and supportive space where you can share your thoughts and feelings without fear of judgement.
-          </div>
-        </div>
-        
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome-card">
+        <h2>Hello, I'm here for you 💜</h2>
+        <p>This is a safe space to share your thoughts and feelings. I can provide mental health support, coping strategies, and a listening ear.</p>
       </div>
-    </main>
-    <form class="msger-inputarea">
-      <input type="text" class="msger-input" id="textInput" placeholder="Enter your message...">
-      <button type="submit" class="msger-send-btn">Send</button>
-    </form>
-  <script src='https://use.fontawesome.com/releases/v5.0.13/js/all.js'></script>
-  <script src="{{ url_for('static', filename='js/bot.js') }}"></script>
+      <div class="msg bot">
+        <div class="avatar">🧠</div>
+        <div>
+          <div class="msg-wrap">
+            <div class="bubble">Welcome! I'm MindEase, your mental health support companion. How are you feeling today? 💜</div>
+          </div>
+          <div class="msg-time" id="initTime"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="userInput" placeholder="Share what's on your mind..." rows="1"></textarea>
+        <button id="sendBtn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('initTime').textContent = getTime();
+
+  function getTime() {
+    const now = new Date();
+    return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  }
+
+  const input = document.getElementById('userInput');
+  input.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function sendQuick(text) {
+    document.getElementById('userInput').value = text;
+    sendMessage();
+  }
+
+  function addMessage(text, isUser, source) {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isUser ? 'user' : 'bot');
+    const sourceBadge = !isUser && source ? `<span class="source-badge ${source==='ai'?'source-ai':'source-local'}">${source==='ai'?'✨ AI Enhanced':'💬 Support Bot'}</span>` : '';
+    div.innerHTML = `
+      <div class="avatar">${isUser ? '👤' : '🧠'}</div>
+      <div>
+        <div class="msg-wrap"><div class="bubble">${text}${sourceBadge}</div></div>
+        <div class="msg-time">${getTime()}</div>
+      </div>`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function showTyping() {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg bot'; div.id = 'typingIndicator';
+    div.innerHTML = `<div class="avatar">🧠</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+    addMessage(text, true);
+    showTyping();
+
+    try {
+      const localRes = await fetch('/get?msg=' + encodeURIComponent(text));
+      const localText = await localRes.text();
+      removeTyping();
+      addMessage(localText, false, 'local');
+    } catch {
+      removeTyping();
+      addMessage("I'm sorry, I'm having trouble responding right now. Please try again.", false, 'local');
+    }
+
+    btn.disabled = false;
+    input.focus();
+  }
+</script>
 </body>
 </html>
