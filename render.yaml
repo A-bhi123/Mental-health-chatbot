@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: mental-health-chatbot
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
+    startCommand: gunicorn app:app --timeout 120 --workers 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.13
