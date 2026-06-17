@@ -14,18 +14,15 @@ lemmatizer = WordNetLemmatizer()
 import pickle
 import numpy as np
 
-# Keras / TensorFlow load - compatible with keras 2.10 model
 import tf_keras as keras
 model = keras.models.load_model(os.path.join(os.path.dirname(__file__), 'model.h5'))
 
 import json
 import random
 
-
+import spacy
 from spacy.language import Language
 from spacy_langdetect import LanguageDetector
-
-
 
 def get_lang_detector(nlp, name):
     return LanguageDetector()
@@ -36,7 +33,6 @@ if not Language.has_factory("language_detector"):
     Language.factory("language_detector", func=get_lang_detector)
 
 nlp.add_pipe('language_detector', last=True)
-
 
 BASE_DIR = os.path.dirname(__file__)
 intents = json.loads(open(os.path.join(BASE_DIR, 'intents.json')).read())
@@ -84,6 +80,7 @@ def getResponse(ints, intents_json):
 def chatbot_response(msg):
     res = getResponse(predict_class(msg, model), intents)
     return res
+
 
 from flask import Flask, render_template, request
 
