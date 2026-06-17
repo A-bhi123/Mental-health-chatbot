@@ -15,7 +15,7 @@ import pickle
 import numpy as np
 
 # Keras / TensorFlow load - compatible with keras 2.10 model
-from tensorflow import keras
+import tf_keras as keras
 model = keras.models.load_model(os.path.join(os.path.dirname(__file__), 'model.h5'))
 
 import json
