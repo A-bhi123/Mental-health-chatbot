@@ -21,41 +21,10 @@ model = keras.models.load_model(os.path.join(os.path.dirname(__file__), 'model.h
 import json
 import random
 
-from transformers import pipeline, AutoTokenizer, TFAutoModelForSeq2SeqLM
-import spacy
+
 from spacy.language import Language
 from spacy_langdetect import LanguageDetector
 
-# HuggingFace cache directory - writable on all platforms
-os.environ['TRANSFORMERS_CACHE'] = os.path.join(os.path.dirname(__file__), 'hf_cache')
-os.makedirs(os.environ['TRANSFORMERS_CACHE'], exist_ok=True)
-
-# English to Swahili translator
-eng_swa_tokenizer = AutoTokenizer.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-eng_swa_model = TFAutoModelForSeq2SeqLM.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-eng_swa_translator = pipeline(
-    "text2text-generation",
-    model=eng_swa_model,
-    tokenizer=eng_swa_tokenizer,
-)
-
-def translate_text_eng_swa(text):
-    translated_text = eng_swa_translator(text, max_length=128, num_beams=5)[0]['generated_text']
-    return translated_text
-
-# Swahili to English translator
-swa_eng_tokenizer = AutoTokenizer.from_pretrained("Rogendo/sw-en", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-swa_eng_model = TFAutoModelForSeq2SeqLM.from_pretrained("Rogendo/sw-en", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-
-swa_eng_translator = pipeline(
-    "text2text-generation",
-    model=swa_eng_model,
-    tokenizer=swa_eng_tokenizer,
-)
-
-def translate_text_swa_eng(text):
-    translated_text = swa_eng_translator(text, max_length=128, num_beams=5)[0]['generated_text']
-    return translated_text
 
 
 def get_lang_detector(nlp, name):
@@ -113,21 +82,8 @@ def getResponse(ints, intents_json):
         return "Sorry, I didn't understand that."
 
 def chatbot_response(msg):
-    doc = nlp(msg)
-    detected_language = doc._.language['language']
-
-    chatbotResponse = "I'm here to help. Could you please rephrase that?"
-
-    if detected_language == "en":
-        res = getResponse(predict_class(msg, model), intents)
-        chatbotResponse = res
-    elif detected_language == 'sw':
-        translated_msg = translate_text_swa_eng(msg)
-        res = getResponse(predict_class(translated_msg, model), intents)
-        chatbotResponse = translate_text_eng_swa(res)
-
-    return chatbotResponse
-
+    res = getResponse(predict_class(msg, model), intents)
+    return res
 
 from flask import Flask, render_template, request
 
@@ -143,21 +99,7 @@ def get_bot_response():
     userText = request.args.get('msg', '')
     if not userText:
         return "Please enter a message."
-
-    doc = nlp(userText)
-    detected_language = doc._.language['language']
-
-    bot_response_translate = userText
-
-    if detected_language == 'sw':
-        bot_response_translate = translate_text_swa_eng(userText)
-
-    chatbot_response_text = chatbot_response(bot_response_translate)
-
-    if detected_language == 'sw':
-        chatbot_response_text = translate_text_eng_swa(chatbot_response_text)
-
-    return chatbot_response_text
+    return chatbot_response(userText)
 
 
 if __name__ == "__main__":
