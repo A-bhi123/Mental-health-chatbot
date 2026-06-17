@@ -31,9 +31,8 @@ os.environ['TRANSFORMERS_CACHE'] = os.path.join(os.path.dirname(__file__), 'hf_c
 os.makedirs(os.environ['TRANSFORMERS_CACHE'], exist_ok=True)
 
 # English to Swahili translator
+eng_swa_tokenizer = AutoTokenizer.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
 eng_swa_model = TFAutoModelForSeq2SeqLM.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-eng_swa_model = AutoModelForSeq2SeqLM.from_pretrained("Rogendo/en-sw", cache_dir=os.environ['TRANSFORMERS_CACHE'])
-
 eng_swa_translator = pipeline(
     "text2text-generation",
     model=eng_swa_model,
